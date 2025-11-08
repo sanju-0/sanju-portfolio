@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #8f0303;
+  --brand-2: #ee3022;
+}
+
+.glass {
+  @apply bg-white/70 dark:bg-white/10 backdrop-blur supports-[backdrop-filter]:bg-white/60;
+}
+
+.container-p {
+  @apply max-w-6xl mx-auto px-4;
+}
