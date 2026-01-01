@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ReactiveFormsModule } from '@angular/forms';
 import { JsonPipe } from '@angular/common';
 import emailjs from '@emailjs/browser';
+import { Validator } from '@angular/forms';
 
 @Component({
   imports: [JsonPipe, ReactiveFormsModule],
