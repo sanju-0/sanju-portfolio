@@ -6,7 +6,7 @@ import {
   getDOM,
   parseCookieValue,
   setRootDomAdapter
-} from "./chunk-MA6OUE23.js";
+} from "./chunk-OJBWKHY4.js";
 import {
   APP_ID,
   ApplicationModule,
@@ -32,23 +32,67 @@ import {
   TracingService,
   ViewEncapsulation,
   _global,
+  allLeavingAnimations,
   createPlatformFactory,
   inject,
   internalCreateApplication,
   platformCore,
-  resolveComponentResources,
   setClassMetadata,
   setDocument,
   ɵɵdefineInjectable,
   ɵɵdefineInjector,
   ɵɵdefineNgModule,
   ɵɵinject
-} from "./chunk-C2JQBOJK.js";
+} from "./chunk-Q3ZR32YE.js";
 import {
   __spreadValues
 } from "./chunk-WDMUDEB6.js";
 
 // node_modules/@angular/platform-browser/fesm2022/dom_renderer.mjs
+var EventManagerPlugin = class {
+  _doc;
+  // TODO: remove (has some usage in G3)
+  constructor(_doc) {
+    this._doc = _doc;
+  }
+  // Using non-null assertion because it's set by EventManager's constructor
+  manager;
+};
+var DomEventsPlugin = class _DomEventsPlugin extends EventManagerPlugin {
+  constructor(doc) {
+    super(doc);
+  }
+  // This plugin should come last in the list of plugins, because it accepts all
+  // events.
+  supports(eventName) {
+    return true;
+  }
+  addEventListener(element, eventName, handler, options) {
+    element.addEventListener(eventName, handler, options);
+    return () => this.removeEventListener(element, eventName, handler, options);
+  }
+  removeEventListener(target, eventName, callback, options) {
+    return target.removeEventListener(eventName, callback, options);
+  }
+  static ɵfac = function DomEventsPlugin_Factory(__ngFactoryType__) {
+    return new (__ngFactoryType__ || _DomEventsPlugin)(ɵɵinject(DOCUMENT));
+  };
+  static ɵprov = ɵɵdefineInjectable({
+    token: _DomEventsPlugin,
+    factory: _DomEventsPlugin.ɵfac
+  });
+};
+(() => {
+  (typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(DomEventsPlugin, [{
+    type: Injectable
+  }], () => [{
+    type: void 0,
+    decorators: [{
+      type: Inject,
+      args: [DOCUMENT]
+    }]
+  }], null);
+})();
 var EVENT_MANAGER_PLUGINS = new InjectionToken(ngDevMode ? "EventManagerPlugins" : "");
 var EventManager = class _EventManager {
   _zone;
@@ -62,7 +106,12 @@ var EventManager = class _EventManager {
     plugins.forEach((plugin) => {
       plugin.manager = this;
     });
-    this._plugins = plugins.slice().reverse();
+    const otherPlugins = plugins.filter((p) => !(p instanceof DomEventsPlugin));
+    this._plugins = otherPlugins.slice().reverse();
+    const domEventPlugin = plugins.find((p) => p instanceof DomEventsPlugin);
+    if (domEventPlugin) {
+      this._plugins.push(domEventPlugin);
+    }
   }
   /**
    * Registers a handler for a specific element and event.
@@ -119,15 +168,6 @@ var EventManager = class _EventManager {
     type: NgZone
   }], null);
 })();
-var EventManagerPlugin = class {
-  _doc;
-  // TODO: remove (has some usage in G3)
-  constructor(_doc) {
-    this._doc = _doc;
-  }
-  // Using non-null assertion because it's set by EventManager's constructor
-  manager;
-};
 var APP_ID_ATTRIBUTE_NAME = "ng-app-id";
 function removeElements(elements) {
   for (const element of elements) {
@@ -730,7 +770,9 @@ var NoneEncapsulationDomRenderer = class extends DefaultDomRenderer2 {
     if (!this.removeStylesOnCompDestroy) {
       return;
     }
-    this.sharedStylesHost.removeStyles(this.styles, this.styleUrls);
+    if (allLeavingAnimations.size === 0) {
+      this.sharedStylesHost.removeStyles(this.styles, this.styleUrls);
+    }
   }
 };
 var EmulatedEncapsulationDomRenderer2 = class extends NoneEncapsulationDomRenderer {
@@ -883,41 +925,6 @@ var BrowserXhr = class _BrowserXhr {
   (typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(BrowserXhr, [{
     type: Injectable
   }], null, null);
-})();
-var DomEventsPlugin = class _DomEventsPlugin extends EventManagerPlugin {
-  constructor(doc) {
-    super(doc);
-  }
-  // This plugin should come last in the list of plugins, because it accepts all
-  // events.
-  supports(eventName) {
-    return true;
-  }
-  addEventListener(element, eventName, handler, options) {
-    element.addEventListener(eventName, handler, options);
-    return () => this.removeEventListener(element, eventName, handler, options);
-  }
-  removeEventListener(target, eventName, callback, options) {
-    return target.removeEventListener(eventName, callback, options);
-  }
-  static ɵfac = function DomEventsPlugin_Factory(__ngFactoryType__) {
-    return new (__ngFactoryType__ || _DomEventsPlugin)(ɵɵinject(DOCUMENT));
-  };
-  static ɵprov = ɵɵdefineInjectable({
-    token: _DomEventsPlugin,
-    factory: _DomEventsPlugin.ɵfac
-  });
-};
-(() => {
-  (typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(DomEventsPlugin, [{
-    type: Injectable
-  }], () => [{
-    type: void 0,
-    decorators: [{
-      type: Inject,
-      args: [DOCUMENT]
-    }]
-  }], null);
 })();
 var MODIFIER_KEYS = ["alt", "control", "meta", "shift"];
 var _keyMap = {
@@ -1082,11 +1089,12 @@ var KeyEventsPlugin = class _KeyEventsPlugin extends EventManagerPlugin {
     }]
   }], null);
 })();
-function bootstrapApplication(rootComponent, options) {
+function bootstrapApplication(rootComponent, options, context) {
   const config = __spreadValues({
-    rootComponent
+    rootComponent,
+    platformRef: context?.platformRef
   }, createProvidersConfig(options));
-  if ((typeof ngJitMode === "undefined" || ngJitMode) && typeof fetch === "function") {
+  if (false) {
     return resolveComponentResources(fetch).catch((error) => {
       console.error(error);
       return Promise.resolve();
@@ -1203,15 +1211,15 @@ var BrowserModule = class _BrowserModule {
 })();
 
 export {
+  EventManagerPlugin,
+  DomEventsPlugin,
   EVENT_MANAGER_PLUGINS,
   EventManager,
-  EventManagerPlugin,
   SharedStylesHost,
   REMOVE_STYLES_ON_COMPONENT_DESTROY,
   DomRendererFactory2,
   BrowserDomAdapter,
   BrowserGetTestability,
-  DomEventsPlugin,
   KeyEventsPlugin,
   bootstrapApplication,
   createApplication,
@@ -1224,9 +1232,9 @@ export {
 @angular/platform-browser/fesm2022/dom_renderer.mjs:
 @angular/platform-browser/fesm2022/browser.mjs:
   (**
-   * @license Angular v20.1.7
-   * (c) 2010-2025 Google LLC. https://angular.io/
+   * @license Angular v20.3.10
+   * (c) 2010-2025 Google LLC. https://angular.dev/
    * License: MIT
    *)
 */
-//# sourceMappingURL=chunk-SXJDUQUD.js.map
+//# sourceMappingURL=chunk-ZUSJWFAM.js.map

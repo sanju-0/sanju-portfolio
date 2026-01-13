@@ -1,6 +1,6 @@
 import {
   getDOM
-} from "./chunk-MA6OUE23.js";
+} from "./chunk-OJBWKHY4.js";
 import {
   ApplicationRef,
   ChangeDetectorRef,
@@ -48,7 +48,7 @@ import {
   ɵɵdirectiveInject,
   ɵɵgetInheritedFactory,
   ɵɵlistener
-} from "./chunk-C2JQBOJK.js";
+} from "./chunk-Q3ZR32YE.js";
 import {
   __spreadProps,
   __spreadValues
@@ -1710,6 +1710,7 @@ var AbstractControl = class {
    * `events` of the parent control instead.
    * For other event types, the events are emitted after the parent control has been updated.
    *
+   * @see [Unified control state change events](guide/forms/reactive-forms#unified-control-state-change-events)
    */
   events = this._events.asObservable();
   /**
@@ -2614,6 +2615,9 @@ var FormGroup = class extends AbstractControl {
     this._updatePristine(options, this);
     this._updateTouched(options, this);
     this.updateValueAndValidity(options);
+    if (options?.emitEvent !== false) {
+      this._events.next(new FormResetEvent(this));
+    }
   }
   /**
    * The aggregate value of the `FormGroup`, including any disabled controls.
@@ -3139,7 +3143,6 @@ var NgForm = class _NgForm extends ControlContainer {
   resetForm(value = void 0) {
     this.form.reset(value);
     this.submittedReactive.set(false);
-    this.form._events.next(new FormResetEvent(this.form));
   }
   _setUpdateStrategy() {
     if (this.options && this.options.updateOn != null) {
@@ -3278,6 +3281,9 @@ var FormControl = class FormControl2 extends AbstractControl {
     this.markAsUntouched(options);
     this.setValue(this.value, options);
     this._pendingChange = false;
+    if (options?.emitEvent !== false) {
+      this._events.next(new FormResetEvent(this));
+    }
   }
   /**  @internal */
   _updateValue() {
@@ -4616,9 +4622,6 @@ var FormGroupDirective = class _FormGroupDirective extends ControlContainer {
   resetForm(value = void 0, options = {}) {
     this.form.reset(value, options);
     this._submittedReactive.set(false);
-    if (options?.emitEvent !== false) {
-      this.form._events.next(new FormResetEvent(this.form));
-    }
   }
   /** @internal */
   _updateDomValue() {
@@ -6218,10 +6221,19 @@ var FormArray = class extends AbstractControl {
    * * `emitEvent`: When true or not supplied (the default), both the `statusChanges` and
    * `valueChanges` observables emit events with the latest status and value when the control is
    * inserted. When false, no events are emitted.
+   *
+   * NOTE: Pushing to the FormArray will not mark it dirty. If you want to mark if dirty, call `markAsDirty()`.
    */
   push(control, options = {}) {
-    this.controls.push(control);
-    this._registerControl(control);
+    if (Array.isArray(control)) {
+      control.forEach((ctrl) => {
+        this.controls.push(ctrl);
+        this._registerControl(ctrl);
+      });
+    } else {
+      this.controls.push(control);
+      this._registerControl(control);
+    }
     this.updateValueAndValidity({
       emitEvent: options.emitEvent
     });
@@ -6239,6 +6251,8 @@ var FormArray = class extends AbstractControl {
    * * `emitEvent`: When true or not supplied (the default), both the `statusChanges` and
    * `valueChanges` observables emit events with the latest status and value when the control is
    * inserted. When false, no events are emitted.
+   *
+   * NOTE: Inserting to the FormArray will not mark it dirty. If you want to mark if dirty, call `markAsDirty()`.
    */
   insert(index, control, options = {}) {
     this.controls.splice(index, 0, control);
@@ -6258,6 +6272,8 @@ var FormArray = class extends AbstractControl {
    * * `emitEvent`: When true or not supplied (the default), both the `statusChanges` and
    * `valueChanges` observables emit events with the latest status and value when the control is
    * removed. When false, no events are emitted.
+   *
+   * NOTE: Removing the FormArray will not mark it dirty. If you want to mark if dirty, call `markAsDirty()`.
    */
   removeAt(index, options = {}) {
     let adjustedIndex = this._adjustIndex(index);
@@ -6449,6 +6465,9 @@ var FormArray = class extends AbstractControl {
     this._updatePristine(options, this);
     this._updateTouched(options, this);
     this.updateValueAndValidity(options);
+    if (options?.emitEvent !== false) {
+      this._events.next(new FormResetEvent(this));
+    }
   }
   /**
    * The aggregate value of the array, including any disabled controls.
@@ -6792,7 +6811,7 @@ var UntypedFormBuilder = class _UntypedFormBuilder extends FormBuilder {
     }]
   }], null, null);
 })();
-var VERSION = new Version("20.1.7");
+var VERSION = new Version("20.3.10");
 var FormsModule = class _FormsModule {
   /**
    * @description
@@ -6945,8 +6964,8 @@ export {
 
 @angular/forms/fesm2022/forms.mjs:
   (**
-   * @license Angular v20.1.7
-   * (c) 2010-2025 Google LLC. https://angular.io/
+   * @license Angular v20.3.10
+   * (c) 2010-2025 Google LLC. https://angular.dev/
    * License: MIT
    *)
 */

@@ -1,12 +1,12 @@
 import {
   EVENT_MANAGER_PLUGINS,
   EventManagerPlugin
-} from "./chunk-SXJDUQUD.js";
+} from "./chunk-ZUSJWFAM.js";
 import {
   XhrFactory,
   getDOM,
   parseCookieValue
-} from "./chunk-MA6OUE23.js";
+} from "./chunk-OJBWKHY4.js";
 import {
   APP_BOOTSTRAP_LISTENER,
   ApplicationRef,
@@ -15,6 +15,7 @@ import {
   DestroyRef,
   ENVIRONMENT_INITIALIZER,
   EnvironmentInjector,
+  IS_ENABLED_BLOCKING_INITIAL_NAVIGATION,
   Inject,
   Injectable,
   InjectionToken,
@@ -69,7 +70,7 @@ import {
   ɵɵdefineInjector,
   ɵɵdefineNgModule,
   ɵɵinject
-} from "./chunk-C2JQBOJK.js";
+} from "./chunk-Q3ZR32YE.js";
 import {
   __async,
   __objRest,
@@ -718,6 +719,17 @@ var HttpRequest = class _HttpRequest {
    */
   redirect;
   /**
+   * The referrer of the request, which can be used to indicate the origin of the request.
+   * This is useful for security and analytics purposes.
+   * Value is a same-origin URL, "about:client", or the empty string, to set request's referrer.
+   */
+  referrer;
+  /**
+   * The integrity metadata of the request, which can be used to ensure the request is made with the expected content.
+   * A cryptographic hash of the resource to be fetched by request
+   */
+  integrity;
+  /**
    * The expected response type of the server.
    *
    * This is used to parse the response appropriately before returning it to
@@ -788,7 +800,7 @@ var HttpRequest = class _HttpRequest {
       }
       if (typeof options.timeout === "number") {
         if (options.timeout < 1 || !Number.isInteger(options.timeout)) {
-          throw new Error(ngDevMode ? "`timeout` must be a positive integer value" : "");
+          throw new RuntimeError(2822, ngDevMode ? "`timeout` must be a positive integer value" : "");
         }
         this.timeout = options.timeout;
       }
@@ -797,6 +809,12 @@ var HttpRequest = class _HttpRequest {
       }
       if (options.redirect) {
         this.redirect = options.redirect;
+      }
+      if (options.integrity) {
+        this.integrity = options.integrity;
+      }
+      if (options.referrer) {
+        this.referrer = options.referrer;
       }
       this.transferCache = options.transferCache;
     }
@@ -875,6 +893,8 @@ var HttpRequest = class _HttpRequest {
     const mode = update.mode || this.mode;
     const redirect = update.redirect || this.redirect;
     const credentials = update.credentials || this.credentials;
+    const referrer = update.referrer || this.referrer;
+    const integrity = update.integrity || this.integrity;
     const transferCache = update.transferCache ?? this.transferCache;
     const timeout = update.timeout ?? this.timeout;
     const body = update.body !== void 0 ? update.body : this.body;
@@ -903,7 +923,9 @@ var HttpRequest = class _HttpRequest {
       timeout,
       mode,
       redirect,
-      credentials
+      credentials,
+      referrer,
+      integrity
     });
   }
 };
@@ -944,6 +966,12 @@ var HttpResponseBase = class {
    */
   type;
   /**
+   * Indicates whether the HTTP response was redirected during the request.
+   * This property is only available when using the Fetch API using `withFetch()`
+   * When using the default XHR Request this property will be `undefined`
+   */
+  redirected;
+  /**
    * Super-constructor for all responses.
    *
    * The single parameter accepted is an initialization hash. Any properties
@@ -954,6 +982,7 @@ var HttpResponseBase = class {
     this.status = init.status !== void 0 ? init.status : defaultStatus;
     this.statusText = init.statusText || defaultStatusText;
     this.url = init.url || null;
+    this.redirected = init.redirected;
     this.ok = this.status >= 200 && this.status < 300;
   }
 };
@@ -997,7 +1026,8 @@ var HttpResponse = class _HttpResponse extends HttpResponseBase {
       headers: update.headers || this.headers,
       status: update.status !== void 0 ? update.status : this.status,
       statusText: update.statusText || this.statusText,
-      url: update.url || this.url || void 0
+      url: update.url || this.url || void 0,
+      redirected: update.redirected ?? this.redirected
     });
   }
 };
@@ -1097,12 +1127,16 @@ function addBody(options, body) {
     reportProgress: options.reportProgress,
     responseType: options.responseType,
     withCredentials: options.withCredentials,
+    credentials: options.credentials,
     transferCache: options.transferCache,
+    timeout: options.timeout,
     keepalive: options.keepalive,
     priority: options.priority,
     cache: options.cache,
     mode: options.mode,
-    redirect: options.redirect
+    redirect: options.redirect,
+    integrity: options.integrity,
+    referrer: options.referrer
   };
 }
 var HttpClient = class _HttpClient {
@@ -1171,7 +1205,10 @@ var HttpClient = class _HttpClient {
         cache: options.cache,
         mode: options.mode,
         redirect: options.redirect,
-        credentials: options.credentials
+        credentials: options.credentials,
+        referrer: options.referrer,
+        integrity: options.integrity,
+        timeout: options.timeout
       });
     }
     const events$ = of(req).pipe(concatMap((req2) => this.handler.handle(req2)));
@@ -1337,12 +1374,6 @@ var FetchBackend = class _FetchBackend {
   })?.fetch ?? ((...args) => globalThis.fetch(...args));
   ngZone = inject(NgZone);
   destroyRef = inject(DestroyRef);
-  destroyed = false;
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
   handle(request) {
     return new Observable((observer) => {
       const aborter = new AbortController();
@@ -1412,7 +1443,7 @@ var FetchBackend = class _FetchBackend {
         let canceled = false;
         yield this.ngZone.runOutsideAngular(() => __async(this, null, function* () {
           while (true) {
-            if (this.destroyed) {
+            if (this.destroyRef.destroyed) {
               yield reader.cancel();
               canceled = true;
               break;
@@ -1463,13 +1494,15 @@ var FetchBackend = class _FetchBackend {
         status = body ? HTTP_STATUS_CODE_OK : 0;
       }
       const ok = status >= 200 && status < 300;
+      const redirected = response.redirected;
       if (ok) {
         observer.next(new HttpResponse({
           body,
           headers,
           status,
           statusText,
-          url
+          url,
+          redirected
         }));
         observer.complete();
       } else {
@@ -1478,7 +1511,8 @@ var FetchBackend = class _FetchBackend {
           headers,
           status,
           statusText,
-          url
+          url,
+          redirected
         }));
       }
     });
@@ -1535,7 +1569,9 @@ var FetchBackend = class _FetchBackend {
       cache: req.cache,
       priority: req.priority,
       mode: req.mode,
-      redirect: req.redirect
+      redirect: req.redirect,
+      referrer: req.referrer,
+      integrity: req.integrity
     };
   }
   concatChunks(chunks, totalLength) {
@@ -1558,7 +1594,7 @@ var FetchBackend = class _FetchBackend {
 (() => {
   (typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(FetchBackend, [{
     type: Injectable
-  }], () => [], null);
+  }], null, null);
 })();
 var FetchFactory = class {
 };
@@ -1862,6 +1898,14 @@ function validateXhrCompatibility(req) {
     property: "credentials",
     errorCode: 2818
     /* RuntimeErrorCode.CREDENTIALS_NOT_SUPPORTED_WITH_XHR */
+  }, {
+    property: "integrity",
+    errorCode: 2820
+    /* RuntimeErrorCode.INTEGRITY_NOT_SUPPORTED_WITH_XHR */
+  }, {
+    property: "referrer",
+    errorCode: 2821
+    /* RuntimeErrorCode.REFERRER_NOT_SUPPORTED_WITH_XHR */
   }];
   for (const {
     property,
@@ -2436,23 +2480,37 @@ function normalizeRequest(request, responseType) {
     context: unwrappedRequest.context,
     transferCache: unwrappedRequest.transferCache,
     credentials: unwrappedRequest.credentials,
+    referrer: unwrappedRequest.referrer,
+    integrity: unwrappedRequest.integrity,
     timeout: unwrappedRequest.timeout
   });
 }
 var HttpResourceImpl = class extends ResourceImpl {
   client;
-  _headers = linkedSignal({
+  _headers = linkedSignal(...ngDevMode ? [{
+    debugName: "_headers",
     source: this.extRequest,
     computation: () => void 0
-  });
-  _progress = linkedSignal({
+  }] : [{
     source: this.extRequest,
     computation: () => void 0
-  });
-  _statusCode = linkedSignal({
+  }]);
+  _progress = linkedSignal(...ngDevMode ? [{
+    debugName: "_progress",
     source: this.extRequest,
     computation: () => void 0
-  });
+  }] : [{
+    source: this.extRequest,
+    computation: () => void 0
+  }]);
+  _statusCode = linkedSignal(...ngDevMode ? [{
+    debugName: "_statusCode",
+    source: this.extRequest,
+    computation: () => void 0
+  }] : [{
+    source: this.extRequest,
+    computation: () => void 0
+  }]);
   headers = computed(() => this.status() === "resolved" || this.status() === "error" ? this._headers() : void 0, ...ngDevMode ? [{ debugName: "headers" }] : []);
   progress = this._progress.asReadonly();
   statusCode = this._statusCode.asReadonly();
@@ -2655,7 +2713,7 @@ function appendMissingHeadersDetection(url, headers, headersToInclude) {
         if (!headersToInclude.includes(headerName) && !warningProduced.has(key)) {
           warningProduced.add(key);
           const truncatedUrl = truncateMiddle(url);
-          console.warn(formatRuntimeError(2802, `Angular detected that the \`${headerName}\` header is accessed, but the value of the header was not transferred from the server to the client by the HttpTransferCache. To include the value of the \`${headerName}\` header for the \`${truncatedUrl}\` request, use the \`includeHeaders\` list. The \`includeHeaders\` can be defined either on a request level by adding the \`transferCache\` parameter, or on an application level by adding the \`httpCacheTransfer.includeHeaders\` argument to the \`provideClientHydration()\` call. `));
+          console.warn(formatRuntimeError(-2802, `Angular detected that the \`${headerName}\` header is accessed, but the value of the header was not transferred from the server to the client by the HttpTransferCache. To include the value of the \`${headerName}\` header for the \`${truncatedUrl}\` request, use the \`includeHeaders\` list. The \`includeHeaders\` can be defined either on a request level by adding the \`transferCache\` parameter, or on an application level by adding the \`httpCacheTransfer.includeHeaders\` argument to the \`provideClientHydration()\` call. `));
         }
         return value.apply(target, [headerName]);
       };
@@ -3380,6 +3438,22 @@ function provideZoneJsCompatibilityDetector() {
     multi: true
   }];
 }
+function provideEnabledBlockingInitialNavigationDetector() {
+  return [{
+    provide: ENVIRONMENT_INITIALIZER,
+    useValue: () => {
+      const isEnabledBlockingInitialNavigation = inject(IS_ENABLED_BLOCKING_INITIAL_NAVIGATION, {
+        optional: true
+      });
+      if (isEnabledBlockingInitialNavigation) {
+        const console2 = inject(Console);
+        const message = formatRuntimeError(5001, "Configuration error: found both hydration and enabledBlocking initial navigation in the same application, which is a contradiction.");
+        console2.warn(message);
+      }
+    },
+    multi: true
+  }];
+}
 function provideClientHydration(...features) {
   const providers = [];
   const featuresKind = /* @__PURE__ */ new Set();
@@ -3396,9 +3470,9 @@ function provideClientHydration(...features) {
   if (typeof ngDevMode !== "undefined" && ngDevMode && featuresKind.has(HydrationFeatureKind.NoHttpTransferCache) && hasHttpTransferCacheOptions) {
     throw new RuntimeError(5001, "Configuration error: found both withHttpTransferCacheOptions() and withNoHttpTransferCache() in the same call to provideClientHydration(), which is a contradiction.");
   }
-  return makeEnvironmentProviders([typeof ngDevMode !== "undefined" && ngDevMode ? provideZoneJsCompatibilityDetector() : [], withDomHydration(), featuresKind.has(HydrationFeatureKind.NoHttpTransferCache) || hasHttpTransferCacheOptions ? [] : withHttpTransferCache({}), providers]);
+  return makeEnvironmentProviders([typeof ngDevMode !== "undefined" && ngDevMode ? provideZoneJsCompatibilityDetector() : [], typeof ngDevMode !== "undefined" && ngDevMode ? provideEnabledBlockingInitialNavigationDetector() : [], withDomHydration(), featuresKind.has(HydrationFeatureKind.NoHttpTransferCache) || hasHttpTransferCacheOptions ? [] : withHttpTransferCache({}), providers]);
 }
-var VERSION = new Version("20.1.7");
+var VERSION = new Version("20.3.10");
 
 export {
   Meta,
@@ -3428,9 +3502,9 @@ export {
 @angular/common/fesm2022/http.mjs:
 @angular/platform-browser/fesm2022/platform-browser.mjs:
   (**
-   * @license Angular v20.1.7
-   * (c) 2010-2025 Google LLC. https://angular.io/
+   * @license Angular v20.3.10
+   * (c) 2010-2025 Google LLC. https://angular.dev/
    * License: MIT
    *)
 */
-//# sourceMappingURL=chunk-FKDC523V.js.map
+//# sourceMappingURL=chunk-5KSQX6OZ.js.map

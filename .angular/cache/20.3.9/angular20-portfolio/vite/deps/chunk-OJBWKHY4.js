@@ -58,7 +58,7 @@ import {
   ɵɵinject,
   ɵɵinjectAttribute,
   ɵɵstyleProp
-} from "./chunk-C2JQBOJK.js";
+} from "./chunk-Q3ZR32YE.js";
 import {
   __async,
   __spreadProps,
@@ -1293,7 +1293,7 @@ function timeZoneGetter(width) {
           return (zone >= 0 ? "+" : "") + padNumber(hours, 2, minusSign) + ":" + padNumber(Math.abs(zone % 60), 2, minusSign);
         }
       default:
-        throw new RuntimeError(2302, ngDevMode && `Unknown zone width "${width}"`);
+        throw new RuntimeError(2310, ngDevMode && `Unknown zone width "${width}"`);
     }
   };
 }
@@ -1623,7 +1623,7 @@ function toDate(value) {
   }
   const date = new Date(value);
   if (!isDate(date)) {
-    throw new RuntimeError(2302, ngDevMode && `Unable to convert "${value}" into a date`);
+    throw new RuntimeError(2311, ngDevMode && `Unable to convert "${value}" into a date`);
   }
   return date;
 }
@@ -3729,7 +3729,7 @@ function isPlatformBrowser(platformId) {
 function isPlatformServer(platformId) {
   return platformId === PLATFORM_SERVER_ID;
 }
-var VERSION = new Version("20.1.7");
+var VERSION = new Version("20.3.10");
 var ViewportScroller = class _ViewportScroller {
   // De-sugared tree-shakable injection
   // See #23917
@@ -4164,7 +4164,7 @@ function logModifiedWarning(ngSrc) {
   const directiveDetails = imgDirectiveDetails(ngSrc);
   console.warn(formatRuntimeError(2964, `${directiveDetails} this image is the Largest Contentful Paint (LCP) element and has had its "ngSrc" attribute modified. This can cause slower loading performance. It is recommended not to modify the "ngSrc" property on any image which could be the LCP element.`));
 }
-var INTERNAL_PRECONNECT_CHECK_BLOCKLIST = /* @__PURE__ */ new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+var INTERNAL_PRECONNECT_CHECK_BLOCKLIST = /* @__PURE__ */ new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 var PRECONNECT_CHECK_BLOCKLIST = new InjectionToken(ngDevMode ? "PRECONNECT_CHECK_BLOCKLIST" : "");
 var PreconnectLinkChecker = class _PreconnectLinkChecker {
   document = inject(DOCUMENT);
@@ -5202,9 +5202,9 @@ export {
 @angular/common/fesm2022/platform_navigation.mjs:
 @angular/common/fesm2022/common.mjs:
   (**
-   * @license Angular v20.1.7
-   * (c) 2010-2025 Google LLC. https://angular.io/
+   * @license Angular v20.3.10
+   * (c) 2010-2025 Google LLC. https://angular.dev/
    * License: MIT
    *)
 */
-//# sourceMappingURL=chunk-MA6OUE23.js.map
+//# sourceMappingURL=chunk-OJBWKHY4.js.map
